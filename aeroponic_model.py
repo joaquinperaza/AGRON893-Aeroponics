@@ -10,7 +10,7 @@ df_radiation = pd.read_excel('Data.xlsx', sheet_name='radiation', skiprows=[1])
 
 print(df_water_times)
 print(df_water_flow)
-class AquaponicModel:
+class AeroponicModel:
     def __init__(self):
         self.water_flow_losses = None
         self.water_times_losses = None

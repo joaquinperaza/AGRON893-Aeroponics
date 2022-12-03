@@ -1,7 +1,7 @@
-from aquaponic_model import AquaponicModel
+from aeroponic_model import AeroponicModel
 
 if __name__ == '__main__':
-    model = AquaponicModel()
+    model = AeroponicModel()
     model.calibrate(plot=True)
 
 

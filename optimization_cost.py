@@ -12,7 +12,7 @@ class Optimization:
         self.aeroponic_model.calibrate(plot=False)
         self.light_bounds = [(1, 22)]
         self.water_flow_bounds = [(0.5, 2.5)]
-        self.water_times_bounds = [(0, 60)]
+        self.water_times_bounds = [(30, 60)]
         self.light_cost_per_day = 0.5
         self.water_cost_per_litre = 0.1
         self.motor_kwh = 0.1
@@ -83,22 +83,35 @@ if __name__ == "__main__":
     from aeroponic_model import AeroponicModel
     model = AeroponicModel()
     opt = Optimization(model)
-    res = opt.optimize(50, light_cost=0.1, water_cost=0.01, motor_kwh=0.7, price_per_kg=100, pwr_cost_per_kwh=1)
+    res = opt.optimize(20, light_cost=0.1, water_cost=0.01, motor_kwh=0.7, price_per_kg=100, pwr_cost_per_kwh=150)
 
     if(res.success):
         print("Optimal solution found")
         print(f"We made {res.fun} dollars")
-        fig, ax = plt.subplots(3, 1)
+        fig, ax = plt.subplots(4, 1, figsize=(10, 10))
+        fig.tight_layout(pad=5.0)
         sz = res.x.size//3
         light = res.x[:sz]
         water_times = res.x[sz:2*sz]
         water_flow = res.x[2*sz:]
         ax[0].plot(light)
         ax[0].set_title("Light")
+        ax[0].set_ylim([0, 24])
         ax[1].plot(water_times)
         ax[1].set_title("Water times")
+        ax[1].set_ylim([0, 60])
         ax[2].plot(water_flow)
         ax[2].set_title("Water flow")
+        ax[2].set_ylim([0, 3])
+        ax[3].set_title("Biomass")
+        biomass=[]
+        for i in range(sz):
+            b = 0
+            if len(biomass)> 0:
+                b=biomass[-1]
+            biomass.append(opt.aeroponic_model.estimate_growing_rate(day=i, biomass=b, light=light[i], water_times=water_times[i], water_flow=water_flow[i]))
+        ax[3].plot(np.cumsum(biomass))
+
         plt.show()
         print(f"Light cost: {opt.calculate_light_cost(light)}")
         print(f"Water cost: {opt.calculate_water_cost(water_flow)}")

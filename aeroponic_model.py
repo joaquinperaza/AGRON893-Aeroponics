@@ -1,10 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import cm
 import pandas as pd
 from scipy.interpolate import CubicSpline
 import warnings
 from scipy.optimize import curve_fit
 from scipy.integrate import odeint
+import itertools
+
 
 # Read df
 df_water_times = pd.read_excel('Data.xlsx', sheet_name='water_times', skiprows=[1])
@@ -202,7 +205,6 @@ class AeroponicModel:
         # Simulate
         days = np.linspace(11, season_length, 100)
         rates = sigmoid_derivative(0,days, *params)
-        print(f"params: {params}")
         biomass = odeint(sigmoid_derivative, 0, days, args=(*params,))
         # Plot
         if plot:
@@ -240,17 +242,28 @@ class AeroponicModel:
             return rate_day
 
 
-    def test_rate(self):
-        params = np.array(self.best_params)
-        plt.plot(np.linspace(0, 50, 100), sigmoid(np.linspace(0, 50, 100), *params))
-        day = 25
-        light = 22
-        water_times = 30
-        water_flow = 0.5
-        biomass = 2
-        rate = self.estimate_growing_rate(day, biomass, light, water_times, water_flow)
-        print(f"Rate: {rate}")
-        
-
+    # Plot the different growing scenaios in a 3D plot
+    def plot_growing_scenarios(self, season_length=50):
+        # Get all combinations
+        light = np.linspace(0, 25, 2)
+        water_times = np.linspace(30, 60, 2)
+        water_flow = np.linspace(0.5, 2, 2)
+        combinations = list(itertools.product(light, water_times, water_flow))
+        ax = plt.axes(projection='3d')
+        lights_, water_times_, water_flows_ = [], [], []
+        b = []
+        for i, combination in enumerate(combinations):
+            print(f"Simulating scenario {i+1}/{len(combinations)}")
+            days, rates, biomass = self.simulate_growing_season(*combination, plot=False, season_length=season_length)
+            lights_.append(combination[0])
+            water_times_.append(combination[1])
+            water_flows_.append(combination[2])
+            b.append(biomass[-1][0])
+            print(combination[0], combination[1], combination[2], biomass[-1][0])
+        ax.scatter3D(lights_, water_times_, water_flows_, c=b, cmap='viridis')
+        ax.set_xlabel('Light')
+        ax.set_ylabel('Water times')
+        ax.set_zlabel('Water flow')
+        plt.show()
 
 

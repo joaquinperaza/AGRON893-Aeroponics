@@ -12,6 +12,7 @@ def test(model):
 
 if __name__ == '__main__':
     model = AeroponicModel()
-    model.calibrate(plot=True)
+    model.calibrate(plot=False)
+    model.plot_growing_scenarios()
     #model.test_rate()
     #test(model)

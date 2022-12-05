@@ -13,3 +13,4 @@ def test(model):
 if __name__ == '__main__':
     model = AeroponicModel()
     model.calibrate(plot=False)
+    test(model)

@@ -9,9 +9,8 @@ def test(model):
     # Tetst average scenario
     model.simulate_growing_season(light=15, water_times=45, water_flow=1)
 
-
 if __name__ == '__main__':
     model = AeroponicModel()
-    model.calibrate(plot=True)
+    model.calibrate(plot=False)
     #model.test_rate()
-    #test(model)
+    test(model)

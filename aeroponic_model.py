@@ -14,11 +14,11 @@ df_lai = pd.read_excel('Data.xlsx', sheet_name='leaf_area_biomass', skiprows=[1]
 df_dm = pd.read_excel('Data.xlsx', sheet_name='fresh_biomass_DM', skiprows=[1])
 df_biomass_curves = pd.read_excel('Data.xlsx', sheet_name='biomass', skiprows=[1])
 
-print(df_water_times)
-print(df_water_flow)
-print(df_radiation)
-print(df_lai)
-print(df_dm)
+# # print(df_water_times)
+# # print(df_water_flow)
+# # print(df_radiation)
+# # print(df_lai)
+# # print(df_dm)
 
 sigmoid = lambda x, a, b, c, d: a / (1 + np.exp(-b * (x - c))) + d
 sigmoid_x = lambda y, a, b, c, d: -1 * np.log((a / (y-d)) - 1) / (b) + c
@@ -70,7 +70,7 @@ class AeroponicModel:
             # Fit spline
             df = group.sort_values(by=['day'])
             params = curve_fit(sigmoid, df['day'], df['biomass_dry'], p0=[0, 1, 20, 40], maxfev=10000)
-            print(f"Radiation : {radiation} | Params : {params[0]}")
+            # # print(f"Radiation : {radiation} | Params : {params[0]}")
             self.growing_curves_rad[radiation] = np.array(params[0])
         # Plot
         if plot:
@@ -100,7 +100,7 @@ class AeroponicModel:
             # Get growing curve
             params = np.array(self.best_params)
             params[0] = df['biomass_dry']
-            print(f"Scenario {group} params: {params}")
+            # # print(f"Scenario {group} params: {params}")
             # Store growing params
             time_curves[group] = np.array(params)
         # Store growing curves
@@ -124,7 +124,7 @@ class AeroponicModel:
             # Get growing curve
             params = bet_scenario_params
             params[0] = self.fresh_biomass_to_dry_biomass(df['biomass_fresh'])
-            print(f"Scenario {group} params: {params}")
+            # # print(f"Scenario {group} params: {params}")
             # Store growing params
             flow_curves[group] = np.array(params)
         # Store growing curves
@@ -202,7 +202,7 @@ class AeroponicModel:
         # Simulate
         days = np.linspace(11, season_length, 100)
         rates = sigmoid_derivative(0,days, *params)
-        print(f"params: {params}")
+        # print(f"params: {params}")
         biomass = odeint(sigmoid_derivative, 0, days, args=(*params,))
         # Plot
         if plot:
@@ -234,7 +234,7 @@ class AeroponicModel:
         day_biomass = sigmoid_x(biomass, *params)
         rate_biomass = sigmoid_derivative(biomass,day_biomass, *params)
         if rate_day > rate_biomass:
-            print(f"Biomass limited growth, equal to day {day_biomass} instead of {day}")
+            # print(f"Biomass limited growth, equal to day {day_biomass} instead of {day}")
             return rate_biomass
         else:
             return rate_day
@@ -249,7 +249,7 @@ class AeroponicModel:
         water_flow = 0.5
         biomass = 2
         rate = self.estimate_growing_rate(day, biomass, light, water_times, water_flow)
-        print(f"Rate: {rate}")
+        # print(f"Rate: {rate}")
         
 
 

@@ -29,22 +29,22 @@ class AeroponicModel:
     def calibrate(self, plot = False):
 
         # Calibrate biomass to leaf area
-        self.biomass_to_leaf = np.polynomial.Chebyshev.fit(df_lai['fresh_biomass'], df_lai['leaf_area'], 5)
+        self.biomass_to_leaf = np.polynomial.Chebyshev.fit(df_lai['fresh_biomass'], df_lai['leaf_area'], 2)
         if plot:
             plt.title('Biomass to leaf area')
             plt.plot(df_lai['fresh_biomass'], df_lai['leaf_area'], 'o', label='data')
-            plt.plot(np.linspace(0, 200, 100), self.biomass_to_leaf(np.linspace(0, 200, 100)), label='chebyshev')
+            plt.plot(np.linspace(0, 300, 100), self.biomass_to_leaf(np.linspace(0, 300, 100)), label='chebyshev')
             plt.legend(loc='best')
             plt.xlabel('Fresh biomass (g/plant)')
             plt.ylabel('Leaf area (cm2/plant)')
             plt.show()
 
         # Calibrate fresh biomass to dry biomass
-        self.fresh_biomass_to_dry_biomass = np.polynomial.Chebyshev.fit(df_dm['fresh_biomass'], df_dm['dry_biomass'], 4)
+        self.fresh_biomass_to_dry_biomass = np.polynomial.Chebyshev.fit(df_dm['fresh_biomass'], df_dm['dry_biomass'], 2)
         if plot:
             plt.title('Fresh biomass to dry biomass')
             plt.plot(df_dm['fresh_biomass'], df_dm['dry_biomass'], 'o', label='data')
-            plt.plot(np.linspace(0, 200, 100), self.fresh_biomass_to_dry_biomass(np.linspace(0, 200, 100)), label='chebyshev')
+            plt.plot(np.linspace(0, 300, 100), self.fresh_biomass_to_dry_biomass(np.linspace(0, 300, 100)), label='chebyshev')
             plt.legend(loc='best')
             plt.xlabel('Fresh biomass (g/plant)')
             plt.ylabel('Dry biomass (g/plant)')
@@ -64,9 +64,10 @@ class AeroponicModel:
             self.growing_curves[radiation] = params[0]
         # Plot
         if plot:
+            plt.scatter(df_biomass_curves['day'], df_biomass_curves['biomass_dry'], label='data')
             plt.title('Growing curves')
             for i in self.growing_curves:
-                plt.plot(np.linspace(11, 50, 100), sigmoid(np.linspace(11, 50, 100), *self.growing_curves[i]), label='Scenario = ' + str(i))
+                plt.plot(np.linspace(11, 50, 100), sigmoid(np.linspace(11, 50, 100), *self.growing_curves[i]), label='Light = ' + str(i))
             plt.legend(loc='best')
             plt.xlabel('Time (days)')
             plt.ylabel('Biomass (g/plant)')

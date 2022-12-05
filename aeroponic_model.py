@@ -39,10 +39,10 @@ class AeroponicModel:
 
     def calibrate(self, plot = False):
 
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
         # Calibrate biomass to leaf area
         self.biomass_to_leaf = np.polynomial.Chebyshev.fit(df_lai['fresh_biomass'], df_lai['leaf_area'], 2)
         if plot:
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
             ax1.set_title('Biomass to leaf area')
             ax1.plot(df_lai['fresh_biomass'], df_lai['leaf_area'], 'o', label='data')
             ax1.plot(np.linspace(0, 300, 100), self.biomass_to_leaf(np.linspace(0, 300, 100)), label='chebyshev')
@@ -59,7 +59,7 @@ class AeroponicModel:
             ax2.legend(loc='best')
             ax2.set_xlabel('Fresh biomass (g/plant)')
             ax2.set_ylabel('Dry biomass (g/plant)')
-            plt.show()
+            
 
         # Calibrate growing curves
         #sort by radiation and group by radiation
@@ -70,11 +70,12 @@ class AeroponicModel:
             # Fit spline
             df = group.sort_values(by=['day'])
             params = curve_fit(sigmoid, df['day'], df['biomass_dry'], p0=[0, 1, 20, 40], maxfev=10000)
-            # Store spline
+            print(f"Radiation : {radiation} | Params : {params[0]}")
             self.growing_curves_rad[radiation] = np.array(params[0])
         # Plot
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
         if plot:
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
+
             ax1.scatter(df_biomass_curves['day'], df_biomass_curves['biomass_dry'], label='data')
             ax1.set_title('Growing curves')
             for i in self.growing_curves_rad:
@@ -85,10 +86,10 @@ class AeroponicModel:
             # Plot derivatives
             ax2.set_title('Growing curves derivatives')
             for i in self.growing_curves_rad:
-                plt.plot(np.linspace(11, 50, 100), sigmoid_derivative(0, np.linspace(11, 50, 100), *self.growing_curves_rad[i]), label='Light = ' + str(i))
+                ax2.plot(np.linspace(11, 50, 100), sigmoid_derivative(0, np.linspace(11, 50, 100), *self.growing_curves_rad[i]), label='Light = ' + str(i))
             ax2.set_xlabel('Time (days)')
             ax2.set_ylabel('Biomass derivative (g/plant/day)')
-            plt.show()
+            
 
         # Get growing curves for each water times
         self.best_params = np.array(self.growing_curves_rad[22])
@@ -106,13 +107,13 @@ class AeroponicModel:
         self.growing_curves_time = time_curves
         # Plot
         if plot:
+            plt.figure()
             plt.title('Growing curves for each water times')
             for group in time_curves:
                 plt.plot(np.linspace(11, days, 100), sigmoid(np.linspace(11, days, 100), *time_curves[group]), label='Water times = ' + str(group))
             plt.legend(loc='best')
             plt.xlabel('Time (days)')
             plt.ylabel('Biomass (g/plant)')
-            plt.show()
 
         # Get growing curves for each water flow
         bet_scenario_params = np.array(self.best_params)
@@ -130,14 +131,14 @@ class AeroponicModel:
         self.growing_curves_flow = flow_curves
         # Plot
         if plot:
+            plt.figure()
             plt.title('Growing curves for each water flow')
             for group in flow_curves:
                 plt.plot(np.linspace(11, days, 100), sigmoid(np.linspace(11, days, 100), *flow_curves[group]), label='Water flow = ' + str(group))
             plt.legend(loc='best')
             plt.xlabel('Time (days)')
             plt.ylabel('Biomass (g/plant)')
-            plt.show()
-        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(10, 5))
+            
 
         # Fit derivatives estimations
         # Get first param for each radiation
@@ -147,6 +148,8 @@ class AeroponicModel:
         # Fit polynomial
         self.light_loss = np.polynomial.Chebyshev.fit(light, loss, 2)
         if plot:
+            fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(10, 5))
+
             ax1.set_title('Derivative to light')
             ax1.plot(light, loss, 'o', label='data')
             ax1.plot(np.linspace(0, 25, 100), self.light_loss(np.linspace(0, 25, 100)), label='chebyshev')
@@ -181,11 +184,12 @@ class AeroponicModel:
             ax3.legend(loc='best')
             ax3.set_xlabel('Water flow')
             ax3.set_ylabel('a-parameter reduction')
-            plt.show()
-
+            
+        plt.show()
 
 
     # Simulate growing season base on light, water times and water flow using odeint and plot results
+    # Assuming constant scenario
     def simulate_growing_season(self, light, water_times, water_flow, plot=True, season_length=50):
         # Get a-param reduction
         light_factor = self.light_loss(light)
@@ -202,13 +206,14 @@ class AeroponicModel:
         biomass = odeint(sigmoid_derivative, 0, days, args=(*params,))
         # Plot
         if plot:
+            plt.figure()
             plt.title(f"Simulation with light = {light}, water times = {water_times}s and water flow = {water_flow}L/h")
             plt.plot(days, biomass, label='Biomass')
             plt.plot(days, rates, label='Rate')
             plt.legend(loc='best')
             plt.xlabel('Time (days)')
             plt.ylabel('Biomass (g/plant)')
-            plt.show()
+        plt.show()
         return days, rates, biomass
 
 
@@ -245,7 +250,7 @@ class AeroponicModel:
         biomass = 2
         rate = self.estimate_growing_rate(day, biomass, light, water_times, water_flow)
         print(f"Rate: {rate}")
-        plt.show()
+        
 
 
 

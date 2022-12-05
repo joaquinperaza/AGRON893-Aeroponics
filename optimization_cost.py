@@ -36,7 +36,10 @@ class Optimization:
         self.price_per_kg = price_per_kg
 
     def simulate(self, light, water_times, water_flow):
-        _, _, biomass = self.aeroponic_model.simulate_growing_season(light=light, water_times=water_times, water_flow=water_flow, plot=False)
+        biomass = 0
+        sz = light.size
+        for i in range(sz):
+            biomass += self.aeroponic_model.estimate_growing_rate(day=i, biomass=biomass, light=light[i], water_times=water_times[i], water_flow=water_flow[i])
         return biomass
 
     def calculate_light_cost(self, light):
@@ -58,7 +61,7 @@ class Optimization:
         yield_kg = self.simulate(light, water_times, water_flow)
         cost = self.calculate_light_cost(light) +\
                self.calculate_water_cost(water_flow) +\
-               self.calculate_motor_cost(water_times) - yield_kg[-1] * self.price_per_kg
+               self.calculate_motor_cost(water_times) - yield_kg * self.price_per_kg
         return cost
 
     def optimize(self, days, light_cost=None, water_cost=None, motor_kwh=None, price_per_kg=None, pwr_cost_per_kwh=None):
@@ -72,13 +75,39 @@ class Optimization:
             self.set_price_per_kg(price_per_kg)
         if pwr_cost_per_kwh is not None:
             self.set_pwr_cost_per_kwh(pwr_cost_per_kwh)
-        x0 = np.ones(3*days)
+        x0 = np.ones(3*days)*10
         res = minimize(self.cost, x0, method='SLSQP', bounds=[*self.light_bounds*days, *self.water_times_bounds*days, *self.water_flow_bounds*days])
-        print(res.x)
         return res
 
 if __name__ == "__main__":
     from aeroponic_model import AeroponicModel
     model = AeroponicModel()
     opt = Optimization(model)
-    print(opt.optimize(30, light_cost=0.02, water_cost=0.01, motor_kwh=0.07, price_per_kg=100.0, pwr_cost_per_kwh=0.001))
+    res = opt.optimize(50, light_cost=0.1, water_cost=0.01, motor_kwh=0.7, price_per_kg=100, pwr_cost_per_kwh=1)
+
+    if(res.success):
+        print("Optimal solution found")
+        print(f"We made {res.fun} dollars")
+        fig, ax = plt.subplots(3, 1)
+        sz = res.x.size//3
+        light = res.x[:sz]
+        water_times = res.x[sz:2*sz]
+        water_flow = res.x[2*sz:]
+        ax[0].plot(light)
+        ax[0].set_title("Light")
+        ax[1].plot(water_times)
+        ax[1].set_title("Water times")
+        ax[2].plot(water_flow)
+        ax[2].set_title("Water flow")
+        plt.show()
+        print(f"Light cost: {opt.calculate_light_cost(light)}")
+        print(f"Water cost: {opt.calculate_water_cost(water_flow)}")
+        print(f"Motor cost: {opt.calculate_motor_cost(water_times)}")
+        print(f"Yield: {opt.simulate(light, water_times, water_flow)}")
+        print(f"Light : {light}")
+        print(f"Water times : {water_times}")
+        print(f"Water flow : {water_flow}")
+# optimize using Nealder Mead
+
+
+

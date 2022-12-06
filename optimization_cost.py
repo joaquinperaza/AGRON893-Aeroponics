@@ -67,9 +67,20 @@ class Optimization:
                self.calculate_motor_cost(water_times) - self.aeroponic_model.dry_biomass_to_fresh_biomass(yield_kg)/1000 * self.price_per_kg * self.n_plants
         return cost
 
-    def optimize(self, days, light_cost_mol_day=None, water_cost=None, motor_kwh=None, price_per_kg=None, pwr_cost_per_kwh=None, n_plants=10):
-        if light_cost_mol_day is not None:
-            self.set_light_cost_per_day(light_cost_mol_day)
+    def optimize(self, days, light_efficiency=None, water_cost=None, motor_kwh=None, price_per_kg=None, pwr_cost_per_kwh=None, n_plants=10):
+        if pwr_cost_per_kwh is not None and light_efficiency is not None:
+            lamp_consumption = 200 #watts
+            radius = 2.5 #meters (lamp_to_plants radius)
+            light_area = 4 * np.pi * radius**2 #meters^2
+            watts_m2_day = lamp_consumption * light_efficiency * 24 / light_area
+            #Convert watts to umol/m2/s
+            umols_s = watts_m2_day * 4.6 #umol/m2/s
+            #Convert umol/m2/s to mol/m2/day
+            mol_day = umols_s * 24 * 60 * 60 / 1000000
+            power_consumption = lamp_consumption * 24 * 0.001 #kWh
+            power_cost = power_consumption * pwr_cost_per_kwh
+            power_cost_per_mol = power_cost / mol_day
+            self.set_light_cost_per_day(power_cost_per_mol)
         if water_cost is not None:
             self.set_water_cost_per_litre(water_cost)
         if motor_kwh is not None:
@@ -155,16 +166,16 @@ if __name__ == "__main__":
 
     scenarios = [
     # (light_day, water_l, water_kwh, lettuce_price)
-        (0.03, 0.0001, 0.11, 3),
-        (0.05, 0.0001, 0.20, 3),
-        (0.05, 0.0001, 0.20, 10),
-        (0.08, 0.0001, 0.3, 3),
+        (0.5, 0.0001, 0.11, 3),
+        (0.5, 0.0001, 0.20, 3),
+        (0.5, 0.0001, 0.20, 10),
+        (0.3, 0.0001, 0.25, 3),
     ]
 
     for light_cost, water_cost, cost_kwh, price in scenarios:
         model = AeroponicModel()
         opt = Optimization(model)
-        res = opt.optimize(40, light_cost_mol_day=light_cost, water_cost=water_cost, motor_kwh=.3, price_per_kg=price,
+        res = opt.optimize(40, light_efficiency=light_cost, water_cost=water_cost, motor_kwh=.3, price_per_kg=price,
                            pwr_cost_per_kwh=cost_kwh, n_plants=no_plants)
         if (res.success):
             output_results(res, opt)

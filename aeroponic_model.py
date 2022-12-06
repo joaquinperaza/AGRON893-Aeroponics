@@ -71,7 +71,7 @@ class AeroponicModel:
             # Fit spline
             df = group.sort_values(by=['day'])
             params = curve_fit(sigmoid, df['day'], df['biomass_dry'], p0=[0, 1, 20, 40], maxfev=10000)
-            # # print(f"Radiation : {radiation} | Params : {params[0]}")
+            print(f"Radiation : {radiation} | Params : {params[0]}")
             self.growing_curves_rad[radiation] = np.array(params[0])
         # Plot
         if plot:

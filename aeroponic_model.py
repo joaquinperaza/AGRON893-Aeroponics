@@ -17,11 +17,11 @@ df_lai = pd.read_excel('Data.xlsx', sheet_name='leaf_area_biomass', skiprows=[1]
 df_dm = pd.read_excel('Data.xlsx', sheet_name='fresh_biomass_DM', skiprows=[1])
 df_biomass_curves = pd.read_excel('Data.xlsx', sheet_name='biomass', skiprows=[1])
 
-print(df_water_times)
-print(df_water_flow)
-print(df_radiation)
-print(df_lai)
-print(df_dm)
+# # print(df_water_times)
+# # print(df_water_flow)
+# # print(df_radiation)
+# # print(df_lai)
+# # print(df_dm)
 
 sigmoid = lambda x, a, b, c, d: a / (1 + np.exp(-b * (x - c))) + d
 sigmoid_x = lambda y, a, b, c, d: -1 * np.log((a / (y-d)) - 1) / (b) + c
@@ -55,6 +55,7 @@ class AeroponicModel:
 
         # Calibrate fresh biomass to dry biomass
         self.fresh_biomass_to_dry_biomass = np.polynomial.Chebyshev.fit(df_dm['fresh_biomass'], df_dm['dry_biomass'], 2)
+        self.dry_biomass_to_fresh_biomass = np.polynomial.Chebyshev.fit(df_dm['dry_biomass'], df_dm['fresh_biomass'], 2)
         if plot:
             ax2.set_title('Fresh biomass to dry biomass')
             ax2.plot(df_dm['fresh_biomass'], df_dm['dry_biomass'], 'o', label='data')
@@ -103,7 +104,7 @@ class AeroponicModel:
             # Get growing curve
             params = np.array(self.best_params)
             params[0] = df['biomass_dry']
-            print(f"Scenario {group} params: {params}")
+            # # print(f"Scenario {group} params: {params}")
             # Store growing params
             time_curves[group] = np.array(params)
         # Store growing curves
@@ -127,7 +128,7 @@ class AeroponicModel:
             # Get growing curve
             params = bet_scenario_params
             params[0] = self.fresh_biomass_to_dry_biomass(df['biomass_fresh'])
-            print(f"Scenario {group} params: {params}")
+            # # print(f"Scenario {group} params: {params}")
             # Store growing params
             flow_curves[group] = np.array(params)
         # Store growing curves
@@ -229,14 +230,13 @@ class AeroponicModel:
         water_flow_factor = self.water_flow_loss[0]*water_flow + self.water_flow_loss[1]
         a = final_biomass*np.min([light_factor, water_times_factor, water_flow_factor])
         # Get growing curve
-        params = np.array(self.growing_curves_rad[22])
+        params = np.array(self.best_params)
         params[0] = a
         # Get growing rate
         rate_day = sigmoid_derivative(biomass,day, *params)
         day_biomass = sigmoid_x(biomass, *params)
         rate_biomass = sigmoid_derivative(biomass,day_biomass, *params)
         if rate_day > rate_biomass:
-            print(f"Biomass limited growth, equal to day {day_biomass} instead of {day}")
             return rate_biomass
         else:
             return rate_day

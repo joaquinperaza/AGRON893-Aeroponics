@@ -61,12 +61,12 @@ class Optimization:
         yield_kg = self.simulate(light, water_times, water_flow)
         cost = self.calculate_light_cost(light) +\
                self.calculate_water_cost(water_flow) +\
-               self.calculate_motor_cost(water_times) - self.aeroponic_model.dry_biomass_to_fresh_biomass(yield_kg) * self.price_per_kg
+               self.calculate_motor_cost(water_times) - self.aeroponic_model.dry_biomass_to_fresh_biomass(yield_kg)/1000 * self.price_per_kg
         return cost
 
-    def optimize(self, days, light_cost=None, water_cost=None, motor_kwh=None, price_per_kg=None, pwr_cost_per_kwh=None):
-        if light_cost is not None:
-            self.set_light_cost_per_day(light_cost)
+    def optimize(self, days, light_cost_mol_day=None, water_cost=None, motor_kwh=None, price_per_kg=None, pwr_cost_per_kwh=None):
+        if light_cost_mol_day is not None:
+            self.set_light_cost_per_day(light_cost_mol_day)
         if water_cost is not None:
             self.set_water_cost_per_litre(water_cost)
         if motor_kwh is not None:
@@ -75,43 +75,59 @@ class Optimization:
             self.set_price_per_kg(price_per_kg)
         if pwr_cost_per_kwh is not None:
             self.set_pwr_cost_per_kwh(pwr_cost_per_kwh)
-        x0 = np.ones(3*days)*10
-        res = minimize(self.cost, x0, method='Powell', bounds=[*self.light_bounds*days, *self.water_times_bounds*days, *self.water_flow_bounds*days])
+        x0 = np.array([11.5]*days + [45]*days + [1]*days)
+        res = minimize(self.cost, x0, method='SLSQP', bounds=[*self.light_bounds*days, *self.water_times_bounds*days, *self.water_flow_bounds*days], options={'maxiter': 5000})
         return res
 
 if __name__ == "__main__":
     from aeroponic_model import AeroponicModel
     model = AeroponicModel()
     opt = Optimization(model)
-    no_plants = 1000
-    res = opt.optimize(45, light_cost=0.0001, water_cost=2.724/3785.41, motor_kwh=0.024, price_per_kg=(1.5/0.45)*no_plants*1e-3, pwr_cost_per_kwh=.1156)
+    no_plants = 15
+    res = opt.optimize(40, light_cost_mol_day = 0.05, water_cost = 2.724 / 3785.41, motor_kwh=1, price_per_kg= 15 * no_plants, pwr_cost_per_kwh=.1156)
 
     if(res.success):
         print("Optimal solution found")
-        print(f"We made {res.fun} dollars")
+        print(f"We made {-res.fun} dollars")
         fig, ax = plt.subplots(4, 1, figsize=(10, 10))
         fig.tight_layout(pad=5.0)
+        fig.subplots_adjust(top=0.9)
+        fig.suptitle(f"Using {no_plants} plants, light cost {opt.light_cost_per_day} usd/mol/day \n"
+                     f", water cost {opt.water_cost_per_litre} usd/L, motor {opt.motor_kwh} kwh, \n"
+                     f"power cost {opt.pwr_cost_per_kwh} usd/kwh, price per kg {opt.price_per_kg} usd/kg")
         sz = res.x.size//3
         light = res.x[:sz]
         water_times = res.x[sz:2*sz]
         water_flow = res.x[2*sz:]
         ax[0].plot(light)
         ax[0].set_title("Light")
-        ax[0].set_ylim([0, 24])
+        ax[0].set_ylim([5, 24])
         ax[1].plot(water_times)
         ax[1].set_title("Water times")
-        ax[1].set_ylim([0, 60])
+        ax[1].set_ylim([0, 65])
         ax[2].plot(water_flow)
         ax[2].set_title("Water flow")
-        ax[2].set_ylim([0, 3])
+        ax[2].set_ylim([0, 1.5])
         ax[3].set_title("Biomass")
         biomass=[]
+        max_biomass = []
         for i in range(sz):
             b = 0
+            m_b = 0
             if len(biomass) > 0:
                 b=biomass[-1]
+                m_b = max_biomass[-1]
             biomass.append(b+opt.aeroponic_model.estimate_growing_rate(day=i, biomass=b, light=light[i], water_times=water_times[i], water_flow=water_flow[i]))
-        ax[3].plot(biomass)
+            max_biomass.append(m_b+opt.aeroponic_model.estimate_growing_rate(day=i, biomass=m_b, light=24, water_times=30, water_flow=.5))
+        fresh_biomass = []
+        for b in biomass:
+            fresh_biomass.append(opt.aeroponic_model.dry_biomass_to_fresh_biomass(b))
+        max_fresh_biomass = []
+        for b in max_biomass:
+            max_fresh_biomass.append(opt.aeroponic_model.dry_biomass_to_fresh_biomass(b))
+        ax[3].plot(fresh_biomass, label="Simulated")
+        ax[3].plot(max_fresh_biomass, label="Max")
+        ax[3].legend()
         print(biomass)
 
         plt.show()
@@ -122,6 +138,8 @@ if __name__ == "__main__":
         print(f"Light : {light}")
         print(f"Water times : {water_times}")
         print(f"Water flow : {water_flow}")
+    else:
+        print("Optimal solution not found")
 # optimize using Nealder Mead
 
 

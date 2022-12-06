@@ -169,13 +169,13 @@ if __name__ == "__main__":
         (0.5, 0.0001, 0.11, 3),
         (0.5, 0.0001, 0.20, 3),
         (0.5, 0.0001, 0.20, 10),
-        (0.3, 0.0001, 0.25, 3),
+        (0.3, 0.0001, 0.20, 3),
     ]
 
-    for light_cost, water_cost, cost_kwh, price in scenarios:
+    for light_eff, water_cost, cost_kwh, price in scenarios:
         model = AeroponicModel()
         opt = Optimization(model)
-        res = opt.optimize(40, light_efficiency=light_cost, water_cost=water_cost, motor_kwh=.3, price_per_kg=price,
+        res = opt.optimize(40, light_efficiency=light_eff, water_cost=water_cost, motor_kwh=.3, price_per_kg=price,
                            pwr_cost_per_kwh=cost_kwh, n_plants=no_plants)
         if (res.success):
             output_results(res, opt)

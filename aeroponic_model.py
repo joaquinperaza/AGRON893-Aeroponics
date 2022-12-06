@@ -52,6 +52,7 @@ class AeroponicModel:
 
         # Calibrate fresh biomass to dry biomass
         self.fresh_biomass_to_dry_biomass = np.polynomial.Chebyshev.fit(df_dm['fresh_biomass'], df_dm['dry_biomass'], 2)
+        self.dry_biomass_to_fresh_biomass = np.polynomial.Chebyshev.fit(df_dm['dry_biomass'], df_dm['fresh_biomass'], 2)
         if plot:
             ax2.set_title('Fresh biomass to dry biomass')
             ax2.plot(df_dm['fresh_biomass'], df_dm['dry_biomass'], 'o', label='data')
@@ -227,14 +228,13 @@ class AeroponicModel:
         water_flow_factor = self.water_flow_loss[0]*water_flow + self.water_flow_loss[1]
         a = final_biomass*np.min([light_factor, water_times_factor, water_flow_factor])
         # Get growing curve
-        params = np.array(self.growing_curves_rad[22])
+        params = np.array(self.best_params)
         params[0] = a
         # Get growing rate
         rate_day = sigmoid_derivative(biomass,day, *params)
         day_biomass = sigmoid_x(biomass, *params)
         rate_biomass = sigmoid_derivative(biomass,day_biomass, *params)
         if rate_day > rate_biomass:
-            # print(f"Biomass limited growth, equal to day {day_biomass} instead of {day}")
             return rate_biomass
         else:
             return rate_day

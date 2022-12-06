@@ -3,7 +3,7 @@ from scipy.optimize import minimize
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-
+import warnings
 
 class Optimization:
 
@@ -81,7 +81,7 @@ class Optimization:
         if n_plants is not None:
             self.set_n_plants(n_plants)
 
-        x0 = np.array([11.5]*days + [45]*days + [1]*days)
+        x0 = np.array([22]*days + [30]*days + [1]*days)
         res = minimize(self.cost, x0, method='SLSQP', bounds=[*self.light_bounds*days, *self.water_times_bounds*days, *self.water_flow_bounds*days], options={'maxiter': 5000})
         return res
 
@@ -92,13 +92,14 @@ def output_results(res, opt):
     fig, ax = plt.subplots(4, 1, figsize=(10, 10))
     fig.tight_layout(pad=5.0)
     fig.subplots_adjust(top=0.9)
-    fig.suptitle(f"Using {no_plants} plants, light cost {opt.light_cost_per_day:.3f} usd/mol/day \n"
+    fig.suptitle(f"Using {no_plants} plants, light cost {opt.light_cost_per_day:.2f} usd/mol/day \n"
                  f", water cost {opt.water_cost_per_litre:.4f} usd/L, motor {opt.motor_kwh:.2f} kwh, \n"
                  f"power cost {opt.pwr_cost_per_kwh:.2f} usd/kwh, price per kg {opt.price_per_kg} usd/kg")
     sz = res.x.size // 3
     light = res.x[:sz]
     water_times = res.x[sz:2 * sz]
     water_flow = res.x[2 * sz:]
+    plt.figtext(0.5, 0.02, f"Optimized profit {-res.fun:.2f} dollars", wrap=True, horizontalalignment='center', fontsize=12)
     ax[0].plot(light, c='tomato')
     ax[0].set_title("Light")
     ax[0].set_ylabel("Light intensity (mol/m2/day)")
@@ -133,12 +134,11 @@ def output_results(res, opt):
     for b in max_biomass:
         max_fresh_biomass.append(opt.aeroponic_model.dry_biomass_to_fresh_biomass(b))
     ax[3].plot(fresh_biomass, label="Simulated", color="green")
-    ax[3].plot(max_fresh_biomass, label="Max", color="blue", style="--")
+    ax[3].plot(max_fresh_biomass, label="Max", color="blue", linestyle="--")
     ax[3].legend()
     plt.show()
     ax[3].legend()
     print(biomass)
-    plt.figtext(0.5, 0.01, f"Optimized profit {-res.fun:.2f} dollars", wrap=True, horizontalalignment='center', fontsize=12)
     plt.show()
     print(f"Light cost: {opt.calculate_light_cost(light)}")
     print(f"Water cost: {opt.calculate_water_cost(water_flow)}")
@@ -151,23 +151,25 @@ def output_results(res, opt):
 if __name__ == "__main__":
     from aeroponic_model import AeroponicModel
 
-    no_plants = 15
+    no_plants = 80
 
     scenarios = [
     # (light_day, water_l, water_kwh, lettuce_price)
-        (0.005, 0.0001, 0.11, 3),
-        (0.010, 0.0001, 0.20, 3),
-        (0.010, 0.0001, 0.20, 10),
-        (0.020, 0.0001, 0.25, 5),
+        (0.03, 0.0001, 0.11, 3),
+        (0.05, 0.0001, 0.20, 3),
+        (0.05, 0.0001, 0.20, 10),
+        (0.08, 0.0001, 0.3, 3),
     ]
 
     for light_cost, water_cost, cost_kwh, price in scenarios:
         model = AeroponicModel()
         opt = Optimization(model)
-        res = opt.optimize(40, light_cost_mol_day=light_cost, water_cost=water_cost, motor_kwh=.2, price_per_kg=price,
+        res = opt.optimize(40, light_cost_mol_day=light_cost, water_cost=water_cost, motor_kwh=.3, price_per_kg=price,
                            pwr_cost_per_kwh=cost_kwh, n_plants=no_plants)
         if (res.success):
             output_results(res, opt)
+        else:
+            warnings.warn("The optimizer failed to find a solution after 5000 iterations")
 
 
 

@@ -93,8 +93,8 @@ def output_results(res, opt):
     fig.tight_layout(pad=5.0)
     fig.subplots_adjust(top=0.9)
     fig.suptitle(f"Using {no_plants} plants, light cost {opt.light_cost_per_day:.3f} usd/mol/day \n"
-                 f", water cost {opt.water_cost_per_litre:.5f} usd/L, motor {opt.motor_kwh:.2f} kwh, \n"
-                 f"power cost {opt.pwr_cost_per_kwh:.3f} usd/kwh, price per kg {opt.price_per_kg} usd/kg")
+                 f", water cost {opt.water_cost_per_litre:.4f} usd/L, motor {opt.motor_kwh:.2f} kwh, \n"
+                 f"power cost {opt.pwr_cost_per_kwh:.2f} usd/kwh, price per kg {opt.price_per_kg} usd/kg")
     sz = res.x.size // 3
     light = res.x[:sz]
     water_times = res.x[sz:2 * sz]
@@ -133,7 +133,9 @@ def output_results(res, opt):
     for b in max_biomass:
         max_fresh_biomass.append(opt.aeroponic_model.dry_biomass_to_fresh_biomass(b))
     ax[3].plot(fresh_biomass, label="Simulated", color="green")
-    ax[3].plot(max_fresh_biomass, label="Max", color="blue")
+    ax[3].plot(max_fresh_biomass, label="Max", color="blue", style="--")
+    ax[3].legend()
+    plt.show()
     ax[3].legend()
     print(biomass)
     plt.figtext(0.5, 0.01, f"Optimized profit {-res.fun:.2f} dollars", wrap=True, horizontalalignment='center', fontsize=12)
@@ -152,17 +154,17 @@ if __name__ == "__main__":
     no_plants = 15
 
     scenarios = [
-        (0.025, 0.0007, 0.1, 15),
-        (0.05, 0.0007, 0.3, 15),
-        (0.025, 0.0007, 0.3, 30),
-        (0.075, 0.0007, 0.4, 20),
-        (0.1, 0.0007, 0.5, 20)
+    # (light_day, water_l, water_kwh, lettuce_price)
+        (0.005, 0.0001, 0.11, 3),
+        (0.010, 0.0001, 0.20, 3),
+        (0.010, 0.0001, 0.20, 10),
+        (0.020, 0.0001, 0.25, 5),
     ]
 
     for light_cost, water_cost, cost_kwh, price in scenarios:
         model = AeroponicModel()
         opt = Optimization(model)
-        res = opt.optimize(40, light_cost_mol_day=light_cost, water_cost=water_cost, motor_kwh=.5, price_per_kg=price,
+        res = opt.optimize(40, light_cost_mol_day=light_cost, water_cost=water_cost, motor_kwh=.2, price_per_kg=price,
                            pwr_cost_per_kwh=cost_kwh, n_plants=no_plants)
         if (res.success):
             output_results(res, opt)

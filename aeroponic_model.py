@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from matplotlib import cm
 import pandas as pd
 from scipy.interpolate import CubicSpline
@@ -7,6 +6,7 @@ import warnings
 from scipy.optimize import curve_fit
 from scipy.integrate import odeint
 import itertools
+import matplotlib.pyplot as plt
 
 
 # Read df
@@ -16,17 +16,19 @@ df_radiation = pd.read_excel('Data.xlsx', sheet_name='radiation', skiprows=[1])
 df_lai = pd.read_excel('Data.xlsx', sheet_name='leaf_area_biomass', skiprows=[1])
 df_dm = pd.read_excel('Data.xlsx', sheet_name='fresh_biomass_DM', skiprows=[1])
 df_biomass_curves = pd.read_excel('Data.xlsx', sheet_name='biomass', skiprows=[1])
-
+df_wue = pd.read_excel('Data.xlsx', sheet_name='accumulated_water_light', skiprows=[1])
 # # print(df_water_times)
 # # print(df_water_flow)
 # # print(df_radiation)
 # # print(df_lai)
 # # print(df_dm)
 
+
 sigmoid = lambda x, a, b, c, d: a / (1 + np.exp(-b * (x - c))) + d
 sigmoid_x = lambda y, a, b, c, d: -1 * np.log((a / (y-d)) - 1) / (b) + c
 sigmoid_derivative = lambda biomass,x,a, b, c, d: a * b * np.exp(-b * (x - c)) / (1 + np.exp(-b * (x - c))) ** 2
 plateau = lambda x, a, b, l: np.maximum((a*x+b), l)
+
 
 class AeroponicModel:
     def __init__(self):
@@ -63,6 +65,7 @@ class AeroponicModel:
             ax2.legend(loc='best')
             ax2.set_xlabel('Fresh biomass (g/plant)')
             ax2.set_ylabel('Dry biomass (g/plant)')
+            plt.savefig("calibration_LAI_DM.png")
             
 
         # Calibrate growing curves
@@ -93,6 +96,7 @@ class AeroponicModel:
                 ax2.plot(np.linspace(11, 50, 100), sigmoid_derivative(0, np.linspace(11, 50, 100), *self.growing_curves_rad[i]), label='Light = ' + str(i))
             ax2.set_xlabel('Time (days)')
             ax2.set_ylabel('Biomass derivative (g/plant/day)')
+            plt.savefig("growing_curves_light.png")
             
 
         # Get growing curves for each water times
@@ -118,6 +122,7 @@ class AeroponicModel:
             plt.legend(loc='best')
             plt.xlabel('Time (days)')
             plt.ylabel('Biomass (g/plant)')
+            plt.savefig("growing_curves_water_times.png")
 
         # Get growing curves for each water flow
         bet_scenario_params = np.array(self.best_params)
@@ -142,6 +147,7 @@ class AeroponicModel:
             plt.legend(loc='best')
             plt.xlabel('Time (days)')
             plt.ylabel('Biomass (g/plant)')
+            plt.savefig("growing_curves_water_flow.png")
             
 
         # Fit derivatives estimations
@@ -188,8 +194,43 @@ class AeroponicModel:
             ax3.legend(loc='best')
             ax3.set_xlabel('Water flow')
             ax3.set_ylabel('a-parameter reduction')
-            
-        plt.show()
+            plt.savefig("calibration_parameters_loss_influence.png")
+            plt.show()
+
+        # Get water use efficiency
+        wues = []
+        lights = []
+        a_params = []
+        for group, df in df_wue.groupby('light'):
+            wue = (df['biomass_dry'] / df['accumulated_water']).mean()
+            wues.append(wue)
+            lights.append(group)
+            light_factor = self.light_loss(group)
+            a = light_factor
+            a_params.append(a)
+        # Fit chebyshev
+        self.wue_from_light = np.polynomial.Chebyshev.fit(lights, wues, 2)
+        self.wue_from_rel_rate = np.polynomial.Chebyshev.fit(a_params, wues, 2)
+
+        if plot:
+            fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+            plt.tight_layout(pad=5.0)
+            ax[0].set_title('WUE from light')
+            ax[0].plot(lights, wues, 'o', label='data')
+            ax[0].plot(np.linspace(0, 25, 100), self.wue_from_light(np.linspace(0, 25, 100)), label='Fitted quadratic')
+            ax[0].legend(loc='best')
+            ax[0].set_xlabel('Light mol/m2/day')
+            ax[0].set_ylabel('WUE (g biomass/ml water)')
+            ax[1].set_title('WUE from a-parameter')
+            ax[1].plot(a_params, wues, 'o', label='data')
+            ax[1].plot(np.linspace(0, 1, 100), self.wue_from_rel_rate(np.linspace(0,1, 100)), label='Fitted quadratic')
+            ax[1].legend(loc='best')
+            ax[1].set_xlabel('a-parameter')
+            ax[1].set_ylabel('WUE (g biomass/ml water)')
+            plt.savefig("calibration_parameters_wue.png")
+            plt.show()
+
+
 
 
     # Simulate growing season base on light, water times and water flow using odeint and plot results
@@ -201,10 +242,11 @@ class AeroponicModel:
         water_flow_factor = self.water_flow_loss[0]*water_flow + self.water_flow_loss[1]
         a = float(self.best_params[0])*np.min([light_factor, water_times_factor, water_flow_factor])
         # Get growing curve
-        params = np.array(self.growing_curves_rad[22])
+        params = np.array(self.best_params)
         params[0] = a
+        print(f"Biomass sigmoid params: {params}")
         # Simulate
-        days = np.linspace(11, season_length, 100)
+        days = np.linspace(11, season_length, season_length-11)
         rates = sigmoid_derivative(0,days, *params)
         biomass = odeint(sigmoid_derivative, 0, days, args=(*params,))
         # Plot

@@ -97,7 +97,7 @@ class Optimization:
         return res
 
 
-def output_results(res, opt):
+def output_results(res, opt, scenario):
     print("Optimal solution found")
     print(f"We made {-res.fun} dollars")
     fig, ax = plt.subplots(4, 1, figsize=(10, 10))
@@ -147,10 +147,11 @@ def output_results(res, opt):
     ax[3].plot(fresh_biomass, label="Simulated", color="green")
     ax[3].plot(max_fresh_biomass, label="Max", color="blue", linestyle="--")
     ax[3].legend()
-    plt.show()
     ax[3].legend()
     print(biomass)
+    plt.savefig(f"results_{scenario}.png")
     plt.show()
+
     print(f"Light cost: {opt.calculate_light_cost(light)}")
     print(f"Water cost: {opt.calculate_water_cost(water_flow)}")
     print(f"Motor cost: {opt.calculate_motor_cost(water_times)}")
@@ -158,27 +159,40 @@ def output_results(res, opt):
     print(f"Light : {light}")
     print(f"Water times : {water_times}")
     print(f"Water flow : {water_flow}")
+    print("Total light : ", np.sum(light))
+    print(f"Light use efficiency: {b / np.sum(light):.2f}")
+    wue = opt.aeroponic_model.wue_from_light(light).mean()
+    print(f"Water use efficiency: {wue:.2f}")
 
 if __name__ == "__main__":
     from aeroponic_model import AeroponicModel
 
     no_plants = 80
 
+    #Scenario 1:
+    #Kansas prices of light, water, electricity, and product lettuce
+
+    # Scenario 2:
+    # New York prices of light, water, electricity, and product lettuce
+
+    # Scenario 3:
+    # Kansas prices of light, water, electricity, and product lettuce
+    # Incandescent light bulbs efficiency of (30%)
+
     scenarios = [
-    # (light_day, water_l, water_kwh, lettuce_price)
-        (0.5, 0.0001, 0.11, 3),
-        (0.5, 0.0001, 0.20, 3),
-        (0.5, 0.0001, 0.20, 10),
-        (0.3, 0.0001, 0.20, 3),
+    # (light_efficiency, water_l, water_kwh, lettuce_price)
+        ("Kansas LED", 0.5, 0.001, 0.11, 3),
+        ("Kansas Incandescent", 0.3, 0.001, 0.11, 3),
+        ("California LED", 0.5, 0.001, 0.28, 12),
     ]
 
-    for light_eff, water_cost, cost_kwh, price in scenarios:
+    for scenario, light_eff, water_cost, cost_kwh, price in scenarios:
         model = AeroponicModel()
         opt = Optimization(model)
         res = opt.optimize(40, light_efficiency=light_eff, water_cost=water_cost, motor_kwh=.3, price_per_kg=price,
                            pwr_cost_per_kwh=cost_kwh, n_plants=no_plants)
         if (res.success):
-            output_results(res, opt)
+            output_results(res, opt, scenario)
         else:
             warnings.warn("The optimizer failed to find a solution after 5000 iterations")
 

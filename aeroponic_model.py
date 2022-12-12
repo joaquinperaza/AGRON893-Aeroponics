@@ -194,6 +194,7 @@ class AeroponicModel:
             ax3.legend(loc='best')
             ax3.set_xlabel('Water flow')
             ax3.set_ylabel('a-parameter reduction')
+            plt.tight_layout(pad=4)
             plt.savefig("calibration_parameters_loss_influence.png")
             plt.show()
 

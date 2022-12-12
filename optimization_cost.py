@@ -160,9 +160,9 @@ def output_results(res, opt, scenario):
     print(f"Water times : {water_times}")
     print(f"Water flow : {water_flow}")
     print("Total light : ", np.sum(light))
-    print(f"Light use efficiency: {b / np.sum(light):.2f}")
+    print(f"Light use efficiency: {b / np.sum(light):.4f}")
     wue = opt.aeroponic_model.wue_from_light(light).mean()
-    print(f"Water use efficiency: {wue:.2f}")
+    print(f"Water use efficiency: {wue:.4f}")
 
 if __name__ == "__main__":
     from aeroponic_model import AeroponicModel

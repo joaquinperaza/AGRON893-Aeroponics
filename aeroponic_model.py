@@ -157,6 +157,10 @@ class AeroponicModel:
         light = list(self.growing_curves_rad.keys())
         # Fit polynomial
         self.light_loss = np.polynomial.Chebyshev.fit(light, loss, 2)
+        # Print chebysev coefficients
+        print(f"Chebyshev coefficients light loss : {self.light_loss.coef}")
+
+
         if plot:
             fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(10, 5))
 
@@ -171,8 +175,15 @@ class AeroponicModel:
         params = [i[0] for i in self.growing_curves_time.values()]
         loss = [(i/np.max(params)) for i in params]
         water_times = list(self.growing_curves_time.keys())
+
+        #Print growing curves params for each water times
+        for key, value in self.growing_curves_time.items():
+            print(f"Water times : {key} | Params : {value}")
+
         # Fit polynomial
         self.water_times_loss = curve_fit(plateau, water_times, loss, maxfev=10000)[0]
+        # Print plateau coefficients
+        print(f"Plateau coefficients water times loss : {self.water_times_loss}")
         if plot:
             ax2.set_title('Derivative to water times')
             ax2.plot(water_times, loss, 'o', label='data')
@@ -181,12 +192,21 @@ class AeroponicModel:
             ax2.set_xlabel('Water times')
             ax2.set_ylabel('a-parameter reduction')
 
+
         #Get first param for each water flow
         params = [i[0] for i in self.growing_curves_flow.values()]
         loss = [(i/np.max(params)) for i in params]
         water_flow = list(self.growing_curves_flow.keys())
         # Fit linear
         self.water_flow_loss = np.polyfit(water_flow, loss, 1)
+
+        # Print growing curves params for each water flow
+        for key, value in self.growing_curves_flow.items():
+            print(f"Water flow : {key} | Params : {value}")
+
+
+        # Print linear coefficients
+        print(f"Linear coefficients water flow loss : {self.water_flow_loss}")
         if plot:
             ax3.set_title('Derivative to water flow')
             ax3.plot(water_flow, loss, 'o', label='data')
